@@ -43,7 +43,7 @@ impl Scanner {
                 Ok(token_type)
             } else if Token::is_always_single_or_double_character_token(c) {
                 match c {
-                    '!' => Ok(if self.match_current('=') {TokenType::BangEqual } else  {TokenType::Bang }),
+                    '!' => Ok(if self.match_current('=') {TokenType::BangEqual} else  {TokenType::Bang }),
                     '=' => Ok(if self.match_current('=') {TokenType::EqualEqual } else  {TokenType::Equal }),
                     '<' => Ok(if self.match_current('=') {TokenType::LessEqual } else  {TokenType::Less }),
                     '>' => Ok(if self.match_current('=') {TokenType::GreaterEqual} else  {TokenType::Greater }),
@@ -51,6 +51,16 @@ impl Scanner {
                         error_description: "Unexpected character".to_owned(),
                         line_number: self.line_number,
                     })
+                }
+            } else if c == '/' {
+                if self.match_current('/') {
+                    while self.peek() != '\n' && !self.is_at_end() {
+                        self.advance()
+                    }
+
+                    // Handle comment
+                } else {
+                    Ok(TokenType::Slash)
                 }
             } else {
                 Err(FeroxError::SyntaxError {
@@ -61,22 +71,26 @@ impl Scanner {
 
             token_type_result.map_or_else(
                 |err| self.errors.push(err),
-                |token_type| tokens.push(Token::new(token_type, c.to_string(), self.line_number)),
+                |token_type| {
+                    tokens.push(Token::new(
+                        token_type,
+                        self.source[self.start..self.current].iter().collect(),
+                        self.line_number,
+                    ))
+                },
             );
         }
     }
 
     fn match_current(&mut self, expected: char) -> bool {
-        if self.current >= self.source.len() || self.source[self.current] != expected {
+        if self.is_at_end() {
+            false
+        } else if let Some(c) = self.source.get(self.current) && *c != expected {
             false
         } else {
             self.current += 1;
             true
         }
-    }
-
-    pub fn set_source(&mut self, source: String) {
-        self.source = source.chars().collect();
     }
 
     fn advance(&mut self) -> Option<char> {

@@ -74,8 +74,8 @@ impl Ferox {
     fn run(&mut self, script: &str) -> Result<(), FeroxError> {
         println!("{script}");
 
-        self.scanner.set_source(script.to_string());
-        let tokens = self.scanner.scan_tokens().unwrap();
+        let mut scanner = Scanner::new(script);
+        let tokens = scanner.scan_tokens().unwrap();
 
         println!("{:?}", &tokens);
 
