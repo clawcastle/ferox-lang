@@ -1,14 +1,16 @@
 #![feature(let_chains)]
 
+mod error;
+mod scanner;
 mod token;
 
 use std::{
-    fmt::Display,
     io::{stdin, stdout, Write},
     path::Path,
 };
 
-use token::{Token, TokenType};
+use error::FeroxError;
+use scanner::Scanner;
 
 fn main() -> Result<(), FeroxError> {
     let mut args = std::env::args().skip(1);
@@ -35,6 +37,7 @@ fn main() -> Result<(), FeroxError> {
 #[derive(Default)]
 struct Ferox {
     had_error: bool,
+    scanner: Scanner,
 }
 
 impl Ferox {
@@ -68,72 +71,14 @@ impl Ferox {
         Ok(())
     }
 
-    fn run(&self, script: &str) -> Result<(), FeroxError> {
+    fn run(&mut self, script: &str) -> Result<(), FeroxError> {
         println!("{script}");
 
-        Ok(())
-    }
-}
+        self.scanner.set_source(script.to_string());
+        let tokens = self.scanner.scan_tokens().unwrap();
 
-struct Scanner<'a> {
-    source: &'a str,
-    tokens: Vec<Token>,
-    line_number: usize,
-    current: Option<String>,
-}
-
-impl<'a> Scanner<'a> {
-    fn new(source: &'a str) -> Self {
-        Self {
-            source,
-            tokens: vec![],
-            line_number: 0,
-            current: None,
-        }
-    }
-
-    fn scan_tokens(&mut self) -> Result<(), FeroxError> {
-        while let Some(c) = self.source.chars().next() {
-            // Handle single character tokens
-            if self.current.is_none() && let Ok(token_type) = TokenType::try_from(c) {
-                self.tokens.push(Token::new(token_type, c.to_string(), self.line_number))
-            } else {
-
-            }
-        }
-
-        self.tokens
-            .push(Token::new(TokenType::Eof, String::new(), self.line_number));
+        println!("{:?}", &tokens);
 
         Ok(())
-    }
-}
-
-#[derive(Debug)]
-pub enum FeroxError {
-    SyntaxError {
-        error_description: String,
-        line_number: usize,
-    },
-    InvalidFilePathError {
-        file_path: String,
-    },
-}
-
-impl Display for FeroxError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            FeroxError::SyntaxError {
-                error_description,
-                line_number,
-            } => f.write_fmt(format_args!(
-                "At line {}: {}",
-                line_number, error_description
-            )),
-            FeroxError::InvalidFilePathError { file_path } => f.write_fmt(format_args!(
-                "The path '{}' does not point to a valid Ferox script file.",
-                file_path
-            )),
-        }
     }
 }
