@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[derive(Debug)]
 pub struct Token {
     pub token_type: TokenType,
@@ -39,7 +41,7 @@ pub enum TokenType {
     Less,
     LessEqual,
     // Literals
-    Identifier { identifier: String },
+    Identifier,
     String { value: String },
     Number { value: f64 },
     // Keywords
@@ -48,7 +50,7 @@ pub enum TokenType {
     Else,
     False,
     Fun,
-    FOr,
+    For,
     If,
     Null,
     Or,
@@ -61,6 +63,30 @@ pub enum TokenType {
     While,
     // Other
     Eof,
+}
+
+impl TokenType {
+    pub fn try_keyword_from_str(s: &str) -> Result<Self, &str> {
+        match s {
+            "and" => Ok(TokenType::And),
+            "class" => Ok(TokenType::Class),
+            "else" => Ok(TokenType::Else),
+            "false" => Ok(TokenType::False),
+            "for" => Ok(TokenType::For),
+            "fun" => Ok(TokenType::Fun),
+            "if" => Ok(TokenType::If),
+            "null" => Ok(TokenType::Null),
+            "or" => Ok(TokenType::Or),
+            "print" => Ok(TokenType::Print),
+            "return" => Ok(TokenType::Return),
+            "super" => Ok(TokenType::Super),
+            "this" => Ok(TokenType::This),
+            "true" => Ok(TokenType::True),
+            "var" => Ok(TokenType::Var),
+            "while" => Ok(TokenType::While),
+            _ => Err(s),
+        }
+    }
 }
 
 impl TryFrom<char> for TokenType {

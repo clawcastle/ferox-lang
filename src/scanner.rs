@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     error::FeroxError,
     token::{Token, TokenType},
@@ -85,6 +87,8 @@ impl Scanner {
                 _ => {
                     if self.is_digit(c) {
                         self.handle_numeric_literal(tokens);
+                    } else if self.is_alpha(c) {
+                        self.handle_identifier(tokens);
                     } else {
                         self.errors.push(FeroxError::SyntaxError {
                             error_description: "Unexpected character".to_owned(),
@@ -190,8 +194,28 @@ impl Scanner {
         }
     }
 
+    fn handle_identifier(&mut self, tokens: &mut Vec<Token>) {
+        while let Some(c) = self.peek() && self.is_alpha_numeric(c) {
+            self.advance();
+        }
+
+        let value: String = self.source[self.start..self.current].iter().collect();
+
+        let token_type = TokenType::try_keyword_from_str(&value).unwrap_or(TokenType::Identifier);
+
+        self.add_token(tokens, token_type);
+    }
+
     fn is_digit(&self, c: char) -> bool {
         c.is_ascii_digit()
+    }
+
+    fn is_alpha(&self, c: char) -> bool {
+        c.is_ascii_alphabetic() || c == '_'
+    }
+
+    fn is_alpha_numeric(&self, c: char) -> bool {
+        self.is_alpha(c) || self.is_digit(c)
     }
 
     fn single_or_double_character_token_type(&mut self, c: char) -> Option<TokenType> {
