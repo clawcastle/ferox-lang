@@ -13,19 +13,6 @@ impl Token {
             line_number,
         }
     }
-
-    pub fn is_always_single_character_token(c: char) -> bool {
-        const ALWAYS_SINGLE_CHARACTER_TOKEN_CHARS: [char; 10] =
-            ['(', ')', '{', '}', ',', '.', '-', '+', ';', '*'];
-
-        ALWAYS_SINGLE_CHARACTER_TOKEN_CHARS.contains(&c)
-    }
-
-    pub fn is_always_single_or_double_character_token(c: char) -> bool {
-        const ALWAYS_SINGLE_OR_DOUBLE_CHARACTER_TOKEN_CHARS: [char; 4] = ['!', '=', '<', '>'];
-
-        ALWAYS_SINGLE_OR_DOUBLE_CHARACTER_TOKEN_CHARS.contains(&c)
-    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]

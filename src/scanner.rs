@@ -83,26 +83,20 @@ impl Scanner {
                     self.handle_string_literal(tokens);
                 }
                 _ => {
-                    self.errors.push(FeroxError::SyntaxError {
-                        error_description: "Unexpected character".to_owned(),
-                        line_number: self.line_number,
-                    });
+                    if self.is_digit(c) {
+                        self.handle_numeric_literal(tokens);
+                    } else {
+                        self.errors.push(FeroxError::SyntaxError {
+                            error_description: "Unexpected character".to_owned(),
+                            line_number: self.line_number,
+                        });
+                    }
                 }
             }
         }
     }
 
     fn add_token(&self, tokens: &mut Vec<Token>, token_type: TokenType) {
-        let token = Token::new(
-            token_type,
-            self.source[self.start..self.current].iter().collect(),
-            self.line_number,
-        );
-
-        tokens.push(token);
-    }
-
-    fn add_token_literal(&self, tokens: &mut Vec<Token>, token_type: TokenType) {
         let token = Token::new(
             token_type,
             self.source[self.start..self.current].iter().collect(),
@@ -137,12 +131,14 @@ impl Scanner {
         current_char.copied()
     }
 
-    fn is_at_end(&self) -> bool {
-        self.current >= self.source.len()
+    fn peek_next(&self) -> Option<char> {
+        let current_char = self.source.get(self.current + 1);
+
+        current_char.copied()
     }
 
-    fn should_ignore(&self, c: char) -> bool {
-        matches!(c, ' ' | '\r' | '\t' | '\n')
+    fn is_at_end(&self) -> bool {
+        self.current >= self.source.len()
     }
 
     fn handle_string_literal(&mut self, tokens: &mut Vec<Token>) {
@@ -167,6 +163,35 @@ impl Scanner {
             .collect();
 
         self.add_token(tokens, TokenType::String { value });
+    }
+
+    fn handle_numeric_literal(&mut self, tokens: &mut Vec<Token>) {
+        while let Some(c) = self.peek() && self.is_digit(c) {
+            self.advance();
+        }
+
+        if let Some(c) = self.peek() && c == '.' && let Some(c) = self.peek_next() && self.is_digit(c) {
+            self.advance();
+
+            while let Some(c) = self.peek() && self.is_digit(c) {
+                self.advance();
+            }
+        }
+
+        let value_string: String = self.source[self.start..self.current].iter().collect();
+
+        if let Ok(value) = value_string.parse::<f64>() {
+            self.add_token(tokens, TokenType::Number { value })
+        } else {
+            self.errors.push(FeroxError::SyntaxError {
+                error_description: "Invalid numeric literal".to_owned(),
+                line_number: self.line_number,
+            })
+        }
+    }
+
+    fn is_digit(&self, c: char) -> bool {
+        c.is_ascii_digit()
     }
 
     fn single_or_double_character_token_type(&mut self, c: char) -> Option<TokenType> {
