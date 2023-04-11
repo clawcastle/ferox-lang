@@ -39,47 +39,49 @@ impl Scanner {
 
     fn scan_token(&mut self, tokens: &mut Vec<Token>) {
         if let Some(c) = self.advance() {
-            let token_type_result: Result<TokenType, FeroxError> = if Token::is_always_single_character_token(c) && let Ok(token_type) = TokenType::try_from(c) {
-                Ok(token_type)
+            if Token::is_always_single_character_token(c) && let Ok(token_type) = TokenType::try_from(c) {
+                self.add_token(tokens, token_type);
             } else if Token::is_always_single_or_double_character_token(c) {
-                match c {
-                    '!' => Ok(if self.match_current('=') {TokenType::BangEqual} else  {TokenType::Bang }),
-                    '=' => Ok(if self.match_current('=') {TokenType::EqualEqual } else  {TokenType::Equal }),
-                    '<' => Ok(if self.match_current('=') {TokenType::LessEqual } else  {TokenType::Less }),
-                    '>' => Ok(if self.match_current('=') {TokenType::GreaterEqual} else  {TokenType::Greater }),
-                    _ => Err(FeroxError::SyntaxError {
-                        error_description: "Unexpected character".to_owned(),
-                        line_number: self.line_number,
-                    })
-                }
+                let token_type = match c {
+                    '!' => if self.match_current('=') {TokenType::BangEqual} else  {TokenType::Bang },
+                    '=' => if self.match_current('=') {TokenType::EqualEqual } else  {TokenType::Equal },
+                    '<' => if self.match_current('=') {TokenType::LessEqual } else  {TokenType::Less },
+                    '>' => if self.match_current('=') {TokenType::GreaterEqual} else  {TokenType::Greater },
+                    _ => unreachable!()
+                };
+
+                self.add_token(tokens, token_type);
             } else if c == '/' {
                 if self.match_current('/') {
-                    while self.peek() != '\n' && !self.is_at_end() {
-                        self.advance()
+                    while self.peek().is_some() && !self.is_at_end() {
+                        _ = self.advance();
                     }
 
                     // Handle comment
                 } else {
-                    Ok(TokenType::Slash)
+                    self.add_token(tokens, TokenType::Slash);
+                }
+            } else if self.should_ignore(c) {
+                if c == '\n' {
+                    self.line_number += 1;
                 }
             } else {
-                Err(FeroxError::SyntaxError {
+                self.errors.push(FeroxError::SyntaxError {
                     error_description: "Unexpected character".to_owned(),
                     line_number: self.line_number,
-                })
+                });
             };
-
-            token_type_result.map_or_else(
-                |err| self.errors.push(err),
-                |token_type| {
-                    tokens.push(Token::new(
-                        token_type,
-                        self.source[self.start..self.current].iter().collect(),
-                        self.line_number,
-                    ))
-                },
-            );
         }
+    }
+
+    fn add_token(&self, tokens: &mut Vec<Token>, token_type: TokenType) {
+        let token = Token::new(
+            token_type,
+            self.source[self.start..self.current].iter().collect(),
+            self.line_number,
+        );
+
+        tokens.push(token);
     }
 
     fn match_current(&mut self, expected: char) -> bool {
@@ -101,7 +103,17 @@ impl Scanner {
         current_char.copied()
     }
 
+    fn peek(&self) -> Option<char> {
+        let current_char = self.source.get(self.current);
+
+        current_char.copied()
+    }
+
     fn is_at_end(&self) -> bool {
         self.current >= self.source.len()
+    }
+
+    fn should_ignore(&self, c: char) -> bool {
+        matches!(c, ' ' | '\r' | '\t' | '\n')
     }
 }
